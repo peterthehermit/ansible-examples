@@ -5,8 +5,6 @@
   vars:
     keep_files:
       - "10-sftpd.conf"
-      - "20-sftp-users.conf"
-      - "30-sftp-superuser.conf"
 
   vars_files:
     - ../vars/users_list.yaml
@@ -54,36 +52,13 @@
             ForceCommand internal-sftp -u 0007 -l VERBOSE -f LOCAL6
             PasswordAuthentication yes
             ChrootDirectory /media/sftp/
-          Match Group sftp-superuser
-            ChrootDirectory /media/sftp/
+          Match LocalPort 22
+            DenyGroups sftp-users
           Match all
             PasswordAuthentication no
         owner: root
         group: root
         mode: '0644'
-
-
-#    - name: Generate the SFTP configuration file
-#      template:
-#        src: ../templates/sftp-users-config.j2
-#        dest: /etc/ssh/sshd_config.d/20-sftp-users.conf
-#        owner: root
-#        group: root
-#        mode: '0644'
-#
-#    - name: Ensure 30-sftp-superuser.conf contains the correct configuration
-#      copy:
-#        dest: /etc/ssh/sshd_config.d/30-sftp-superuser.conf
-#        content: |
-#          # This file is managed by Ansible, don't update by hand
-#          Match Group sftp-superuser
-#            ChrootDirectory /mnt/sftp/
-#          # Catch all for other users
-#          Match Group sftp-users
-#            ChrootDirectory /mnt/sftp/
-#        owner: root
-#        group: root
-#        mode: '0644'
 
     - name: Restart sshd socket
       systemd:

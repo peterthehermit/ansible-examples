@@ -10,8 +10,10 @@
 * Create an ubuntu 24.04 VM
 * Assign the public IP to the VM
 * Allow connections on port 2222
+* Mount disk to /media/sftp
 
 ## On the VM
+* Format disk ext4
 * Mount the disk to /mnt/sftp
 * Install Ansible
 * Run the main.yaml playbook
