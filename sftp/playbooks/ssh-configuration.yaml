@@ -1,0 +1,98 @@
+- name: Remove all files in sshd_config.d except specified ones
+  hosts: localhost
+  become: yes
+
+  vars:
+    keep_files:
+      - "10-sftpd.conf"
+      - "20-sftp-users.conf"
+      - "30-sftp-superuser.conf"
+
+  vars_files:
+    - ../vars/users_list.yaml
+        
+  tasks:
+    - name: Find all files in /etc/ssh/sshd_config.d
+      find:
+        paths: /etc/ssh/sshd_config.d
+        patterns: "*.conf"
+        file_type: file
+      register: all_sshd_config_files
+
+    - name: Remove files in sshd_config.d except those specified
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ all_sshd_config_files.files }}"
+      when: item.path | basename not in keep_files
+
+    - name: Ensure the /etc/systemd/system/ssh.socket.d directory exists
+      file:
+        path: /etc/systemd/system/ssh.socket.d
+        state: directory
+        mode: '0755'
+
+    - name: Ensure override.conf contains the correct configuration
+      copy:
+        dest: /etc/systemd/system/ssh.socket.d/override.conf
+        content: |
+          # This file is managed by Ansible, don't update by hand
+          [Socket]
+          ListenStream=2222
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Ensure 10-sftpd.conf contains the correct configuration
+      copy:
+        dest: /etc/ssh/sshd_config.d/10-sftpd.conf
+        content: |
+          # This file is managed by Ansible, don't update by hand
+          # This file is managed by Ansible, don't update by hand
+          Match Group sftp-users LocalPort 2222
+            Subsystem sftp  internal-sftp -l INFO
+            ForceCommand internal-sftp -u 0007 -l VERBOSE -f LOCAL6
+            PasswordAuthentication yes
+            ChrootDirectory /media/sftp/
+          Match Group sftp-superuser
+            ChrootDirectory /media/sftp/
+          Match all
+            PasswordAuthentication no
+        owner: root
+        group: root
+        mode: '0644'
+
+
+#    - name: Generate the SFTP configuration file
+#      template:
+#        src: ../templates/sftp-users-config.j2
+#        dest: /etc/ssh/sshd_config.d/20-sftp-users.conf
+#        owner: root
+#        group: root
+#        mode: '0644'
+#
+#    - name: Ensure 30-sftp-superuser.conf contains the correct configuration
+#      copy:
+#        dest: /etc/ssh/sshd_config.d/30-sftp-superuser.conf
+#        content: |
+#          # This file is managed by Ansible, don't update by hand
+#          Match Group sftp-superuser
+#            ChrootDirectory /mnt/sftp/
+#          # Catch all for other users
+#          Match Group sftp-users
+#            ChrootDirectory /mnt/sftp/
+#        owner: root
+#        group: root
+#        mode: '0644'
+
+    - name: Restart sshd socket
+      systemd:
+        name: ssh.socket
+        state: restarted
+        daemon_reload: true
+
+    - name: Restart sshd
+      systemd:
+        name: ssh
+        state: restarted
+        daemon_reload: true

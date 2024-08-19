@@ -1,0 +1,46 @@
+- name: Create and configure sftp-users 
+  hosts: localhost
+  become: yes
+
+  vars_files:
+    - ../vars/users_list.yaml
+
+  tasks:
+    - name: Ensure the sftp-users group exists
+      group:
+        name: sftp-users
+        state: present
+
+    - name: Ensure the sftp-superuser group exists
+      group:
+        name: sftp-superuser
+        state: present
+
+    - name: Create users and add to sftp-users with nologin shell
+      user:
+        name: "{{ item.username }}"
+        groups: "{{ item.groups | default('') }},sftp-users"
+        home: "{{ item.home }}"
+        create_home: false
+        shell: "/usr/sbin/nologin"
+        password: "{{ item.password | password_hash('sha512') }}"
+        state: present
+      loop: "{{ users_list }}"
+
+    - name: Ensure /media/sftp exists and has the correct permissions
+      file:
+        path: "/media/sftp"
+        state: directory
+        owner: root
+        group: sftp-users
+        mode: "710"
+
+    - name: Create home directories in /media/sftp
+      file:
+        path: "/media/sftp/{{ item.username }}"
+        state: directory
+        owner: "{{ item.username }}"
+        group: sftp-superuser
+        mode: "2770"
+      loop: "{{ users_list }}"
+  

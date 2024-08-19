@@ -1,0 +1,50 @@
+- name: Delete old sftp files
+  hosts: localhost
+  become: yes
+
+  tasks:
+    - name: Create cleanup script
+      copy:
+        dest: /usr/local/bin/cleanup-sftp-files.sh
+        content: |
+          # This file is managed by Ansible, don't update by hand
+          # Finds and deletes all files more than four week old in /mnt/sftp
+          find "/mnt/sftp" -type f -mtime +28 -exec rm -f {} \;
+        owner: root
+        group: root
+        mode: "700"
+    - name: Create systemd service to run cleanup script
+      copy:
+        dest: /etc/systemd/system/cleanup-sftp-files.service
+        content: | 
+          # This file is managed by Ansible, don't update by hand
+          # Systemd service to run sftp file cleanup
+          [Unit]
+          Description=Cleanup old files in sftp directory /mnt/sftp
+
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/bin/cleanup-sftp-files.sh
+    - name: Create systemd service to run cleanup script
+      copy:
+        dest: /etc/systemd/system/cleanup-sftp-files.timer
+        content: | 
+          # This file is managed by Ansible, don't update by hand
+          # Systemd timer to run sftp file cleanup
+          [Unit]
+          Description=Run cleanup-old-files service every week
+          
+          [Timer]
+          OnCalendar=daily
+          OnCalendar=Mon..Sun 01:00:00
+          Persistent=true
+          
+          [Install]
+          WantedBy=timers.target
+
+    - name: Enable systemd timer
+      ansible.builtin.systemd:
+        name: cleanup-sftp-files.timer
+        enabled: yes
+        state: started
+        daemon_reload: true

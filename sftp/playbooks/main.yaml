@@ -1,0 +1,6 @@
+- name: Main Playbook
+  hosts: localhost
+  become: yes
+- import_playbook: groups-and-users.yaml
+- import_playbook: ssh-configuration.yaml
+- import_playbook: delete-old-files.yaml

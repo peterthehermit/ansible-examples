@@ -1,0 +1,18 @@
+users_list:
+  - username: dataglide
+    password: sftp2024
+    groups: 'sftp-superuser'
+    home: /
+  - username: testuser
+    password: sftp2024
+    home: /testuser
+  - username: testuser1
+    password: sftp2024
+    home: /testuser1
+  - username: testuser2
+    password: sftp2024
+    home: /testuser2
+  - username: testuser3
+    password: sftp2024
+    home: /testuser3
+
